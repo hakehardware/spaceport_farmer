@@ -13,7 +13,6 @@ class ContainerMonitor:
             network_mode = container.attrs.get('HostConfig').get('NetworkMode')
 
             stats = container.stats(stream=False)
-            logger.info(server_info)
             memory_usage = stats['memory_stats']['stats']['active_anon'] + stats['memory_stats']['stats']['active_file']
             memory_limit = stats['memory_stats']['limit']
             total_usage = stats['cpu_stats']['cpu_usage']['total_usage']

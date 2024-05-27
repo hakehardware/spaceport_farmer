@@ -4,6 +4,7 @@ import sys
 
 from src.logger import logger
 from src.container_monitor import ContainerMonitor
+from src.stream_monitor import StreamMonitor
 
 class Farmer:
     def __init__(self, config) -> None:
@@ -34,11 +35,6 @@ class Farmer:
 
     def start_container_monitor(self):
 
-        logger.info("Getting initial container resources")
-        self.container = ContainerMonitor.get_container_resources(self.container_id, self.docker_client, self.host_ip)
-        logger.info("Registering container")
-        ContainerMonitor.update_container_resources(True, self.container, self.nexus_url)
-
         while not self.stop_event.is_set():
             self.stop_event.wait(10)
             self.container = ContainerMonitor.get_container_resources(self.container_id, self.docker_client, self.host_ip)
@@ -46,9 +42,9 @@ class Farmer:
             ContainerMonitor.update_container_resources(False, self.container, self.nexus_url)
             logger.info('Updated container resources')
             
-    def start_log_monitor(self):
+    def start_stream_monitor(self):
         logger.info("Starting Log Monitor")
-        pass
+        StreamMonitor.monitor_stream(self.container, self.docker_client, self.stop_event, self.nexus_url)
 
     def start_metrics_monitor(self):
         logger.info("Starting Metrics Monitor")
@@ -58,7 +54,13 @@ class Farmer:
         try:
             self.get_container()
 
-            log_monitor_thread = threading.Thread(target=self.start_log_monitor)
+            # Register
+            logger.info("Getting initial container resources")
+            self.container = ContainerMonitor.get_container_resources(self.container_id, self.docker_client, self.host_ip)
+            logger.info("Registering container")
+            ContainerMonitor.update_container_resources(True, self.container, self.nexus_url)
+
+            log_monitor_thread = threading.Thread(target=self.start_stream_monitor)
             resource_monitor_thread = threading.Thread(target=self.start_container_monitor)
             metrics_monitor_thread = threading.Thread(target=self.start_metrics_monitor)
 
