@@ -17,6 +17,17 @@ class NexusAPI:
         if response.status_code == 201: return response.json()
         else: return False
 
+    def get_events(base_url, name):
+        local_url = f"{base_url}/get/events?event_source={name}"
+        response = requests.get(local_url)
+        json_data = response.json()
+
+        if response.status_code < 300:
+            return json_data
+        else:
+            logger.error(f"Error getting events {json_data.get('message')}")
+            return None
+
     def push(local_url, event):
         max_retries = 10
         retries = 0

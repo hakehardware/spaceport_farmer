@@ -300,7 +300,7 @@ class StreamMonitor:
                     'Reward Hash': match.group(2),
                     'Reward Type': 'Reward'
                 }
-                logger.info(event)
+                # logger.info(event)
 
             if 'Received invalid piece from peer piece_index' in log['Event Data']:
                 event['Event Name'] = 'Invalid Piece from Peer'
@@ -390,7 +390,12 @@ class StreamMonitor:
                     stop_event.wait(30)
                     continue
 
-                start = datetime.min.replace(tzinfo=timezone.utc)
+                response = NexusAPI.get_events(nexus_url, container_data['Container Name'])
+                if len(response.get('data')) > 0:
+                    logger.info(response.get('data')[0].get('event_datetime'))
+                    start = datetime.strptime(response.get('data')[0].get('event_datetime'), "%Y-%m-%d %H:%M:%S")
+                else: 
+                    start = datetime.min.replace(tzinfo=timezone.utc)
 
                 generator = container.logs(since=start, stdout=True, stderr=True, stream=True)
                 for log in generator:
@@ -408,6 +413,11 @@ class StreamMonitor:
                             continue
 
                         created = NexusAPI.create_event(nexus_url, event)
+
+                        if not created:
+                            continue
+                        
+                        logger.info(created)
 
                     except Exception as e:
                         logger.error("Error in generator:", exc_info=e)

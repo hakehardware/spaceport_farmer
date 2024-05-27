@@ -1,6 +1,6 @@
 from src.logger import logger
 from src.utils import Utils
-from datetime import datetime
+from datetime import datetime, timezone
 from src.nexus_api import NexusAPI
 
 class ContainerMonitor:
@@ -63,8 +63,9 @@ class ContainerMonitor:
             'Event Type': 'Container',
             'Event Source': container['Container Name'],
             'Event Level': 'INFO',
-            'Event Datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'Event Datetime': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
             'Event Data': container
         }
 
         NexusAPI.update_container(nexus_url, event)
+        NexusAPI.create_event(nexus_url, event)
