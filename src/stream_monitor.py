@@ -5,6 +5,8 @@ from src.utils import Utils
 import re
 from src.nexus_api import NexusAPI
 
+# TODO: do 'if not match' instead of 'if match'
+
 class StreamMonitor:
     @staticmethod
     def parse_log(log_str):
@@ -375,6 +377,10 @@ class StreamMonitor:
             logger.error(f"Error in parse_event {log}:", exc_info=e)
     
     @staticmethod
+    def handle_event(event):
+        logger.info('Event Handled')
+
+    @staticmethod
     def monitor_stream(container_data, docker_client, stop_event, nexus_url):
         container = docker_client.containers.get(container_data['Container ID'])
 
@@ -390,9 +396,9 @@ class StreamMonitor:
                     stop_event.wait(30)
                     continue
 
-                response = NexusAPI.get_events(nexus_url, container_data['Container Name'])
+                response = NexusAPI.get_latest_events(nexus_url, container_data['Container Name'])
                 if len(response.get('data')) > 0:
-                    logger.info(response.get('data')[0].get('event_datetime'))
+                    logger.info(f"Getting Logs Since: {response.get('data')[0].get('event_datetime')}")
                     start = datetime.strptime(response.get('data')[0].get('event_datetime'), "%Y-%m-%d %H:%M:%S")
                 else: 
                     start = datetime.min.replace(tzinfo=timezone.utc)
@@ -417,7 +423,7 @@ class StreamMonitor:
                         if not created:
                             continue
                         
-                        logger.info(created)
+                        StreamMonitor.handle_event(event)
 
                     except Exception as e:
                         logger.error("Error in generator:", exc_info=e)

@@ -38,9 +38,7 @@ class Farmer:
         while not self.stop_event.is_set():
             self.stop_event.wait(10)
             self.container = ContainerMonitor.get_container_resources(self.container_id, self.docker_client, self.host_ip)
-            logger.info('Got container resources')
             ContainerMonitor.update_container_resources(False, self.container, self.nexus_url)
-            logger.info('Updated container resources')
             
     def start_stream_monitor(self):
         logger.info("Starting Log Monitor")

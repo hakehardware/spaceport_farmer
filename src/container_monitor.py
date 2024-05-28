@@ -54,7 +54,7 @@ class ContainerMonitor:
             return resources
 
         except Exception as e:
-            logger.error("Error updating node container resources:", exc_info=e)
+            logger.error("Error updating farmer container resources:", exc_info=e)
 
     @staticmethod
     def update_container_resources(is_register, container, nexus_url):
@@ -67,5 +67,5 @@ class ContainerMonitor:
             'Event Data': container
         }
 
-        NexusAPI.update_container(nexus_url, event)
+        # NexusAPI.update_container(nexus_url, event)
         NexusAPI.create_event(nexus_url, event)
