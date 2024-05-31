@@ -11,6 +11,13 @@ class NexusAPI:
         logger.info(f"Updating Container @ {base_url}")
         logger.info(f"Event Data: {event}")
 
+    @staticmethod
+    def upsert_entity(base_url, entity, event):
+        local_url = f"{base_url}/upsert/{entity}"
+        response = NexusAPI.push(local_url, event)
+        if response.status_code < 300: return response.json()
+        else: return False
+
     def create_event(base_url, event):
         local_url = f"{base_url}/insert/event"
         response = NexusAPI.push(local_url, event)

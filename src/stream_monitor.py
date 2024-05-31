@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from src.utils import Utils
 import re
 from src.nexus_api import NexusAPI
+import time
 
 # TODO: do 'if not match' instead of 'if match'
 
@@ -34,7 +35,7 @@ class StreamMonitor:
         return split_values
 
     @staticmethod
-    def parse_event(log, name):
+    def parse_event(log, name, base_url):
         try:
 
             event = {
@@ -54,9 +55,10 @@ class StreamMonitor:
                 if match:
                     rpc_url = match.group(1)
                     event['Event Data'] = {
+                        'Farmer Status': 'Initializing',
                         'RPC URL': rpc_url
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'l3_cache_groups' in log['Event Data']:
                 event['Event Name'] = 'Detecting L3 Cache Groups'
@@ -66,9 +68,10 @@ class StreamMonitor:
                 if match:
                     l3_cache_groups_value = match.group(1)
                     event['Event Data'] = {
+                        "Farmer Status": "Initializing",
                         'L3 Cache Groups': l3_cache_groups_value
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'plotting_thread_pool_core_indices' in log['Event Data']:
                 event['Event Name'] = 'Preparing Plotting Thread Pools'
@@ -90,16 +93,19 @@ class StreamMonitor:
                     replotting_values = StreamMonitor.extract_cpu_sets(replotting_match.group(1))
 
                 event['Event Data'] = {
-                    'Plotting CPU Sets': plotting_values,
-                    'Replotting CPU Sets': replotting_values
+                    'Farmer Status': "Initializaing",
+                    'Plotting CPU Sets': ', '.join(plotting_values),
+                    'Replotting CPU Sets': ', '.join(plotting_values)
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
                 
             if 'Checking plot cache contents' in log['Event Data']:
                 event['Event Name'] = 'Checking Plot Cache Contents'
                 event['Event Type'] = 'Farmer'
                 event['Event Data'] = {
-                    'Status': 'Checking Plot Cache Contents'
+                    'Farmer Status': 'Checking Plot Cache Contents'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Finished checking plot cache contents' in log['Event Data']:
                 event['Event Name'] = 'Finished Checking Plot Cache Contents'
@@ -107,13 +113,15 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Status': 'Finished Checking Plot Cache Contents'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Benchmarking faster proving method' in log['Event Data']:
                 event['Event Name'] = 'Benchmarking Proving Method'
                 event['Event Type'] = 'Farm'
                 event['Event Data'] = {
-                    'Status': 'Benchmarking Proving Method'
+                    'Status': 'Benchmarking Proving Methods'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'fastest_mode' in log['Event Data']:
                 event['Event Name'] = 'Found Fastest Mode'
@@ -124,9 +132,10 @@ class StreamMonitor:
                 if match:
                     event['Event Data'] = {
                         'Farm Index': match.group(1),
-                        'Fastest Mode': match.group(2)
+                        'Fastest Mode': match.group(2),
+                        'Farm Status': 'Initializing'
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'ID:' in log['Event Data']:
                 event['Event Name'] = 'Register Farm ID'
@@ -145,9 +154,10 @@ class StreamMonitor:
 
                 event['Event Data'] = {
                     'Farm Index': farm_index_value,
-                    'Farm ID': farm_id_value
+                    'Farm ID': farm_id_value,
+                    'Farm Status': 'Initializing'
                 }
-                # logger.info(event)
+                NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'Genesis hash:' in log['Event Data']:
                 event['Event Name'] = 'Register Genesis Hash'
@@ -167,9 +177,10 @@ class StreamMonitor:
 
                 event['Event Data'] = {
                     'Farm Index': farm_index_value,
-                    'Genesis Hash': genesis_hash_value
+                    'Farm Genesis Hash': genesis_hash_value,
+                    'Farm Status': 'Initializing'
                 }
-                # logger.info(event)
+                NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'Public key:' in log['Event Data']:
                 event['Event Name'] = 'Register Public Key'
@@ -190,9 +201,10 @@ class StreamMonitor:
 
                 event['Event Data'] = {
                     'Farm Index': farm_index_value,
-                    'Public Key': public_key_value
+                    'Farm Public Key': public_key_value,
+                    'Farm Status': 'Initializing'
                 }
-                # logger.info(event)
+                NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'Allocated space:' in log['Event Data']:
                 event['Event Name'] = 'Register Allocated Space'
@@ -208,9 +220,10 @@ class StreamMonitor:
 
                     event['Event Data'] = {
                         'Farm Index': int(match.group(1)),
-                        'Farm Allocated Space': allocated_gib                    
+                        'Farm Size': allocated_gib,
+                        'Farm Status': 'Initializing'                
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'Directory:' in log['Event Data']:
                 event['Event Name'] = 'Register Directory'
@@ -221,10 +234,10 @@ class StreamMonitor:
                 if match:
                     event['Event Data'] = {
                         'Farm Index': int(match.group(1)),
-                        'Farm Directory': match.group(2)
+                        'Farm Directory': match.group(2),
+                        'Farm Status': 'Farming'
                     }
-
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
 
             if 'Collecting already plotted pieces' in log['Event Data']:
                 event['Event Name'] = 'Collecting Plotted Pieces'
@@ -232,6 +245,7 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Status': 'Collecting Plotted Pieces'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Finished collecting already plotted pieces successfully' in log['Event Data']:
                 event['Event Name'] = 'Finished Collecting Plotted Pieces'
@@ -239,6 +253,7 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Status': 'Finished Collecting Plotted Pieces'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Initializing piece cache' in log['Event Data']:
                 event['Event Name'] = 'Initializing Piece Cache'
@@ -246,6 +261,7 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Status': 'Initializing Piece Cache'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Synchronizing piece cache' in log['Event Data']:
                 event['Event Name'] = 'Syncronizing Piece Cache'
@@ -253,6 +269,7 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Status': 'Syncronizing Piece Cache'
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Piece cache sync' in log['Event Data']:
                 event['Event Name'] = 'Piece Cache Sync'
@@ -263,18 +280,19 @@ class StreamMonitor:
 
                 if match:
                     event['Event Data'] = {
-                        'Status': 'Syncronizing Piece Cache',
+                        'Farmer Status': 'Syncronizing Piece Cache',
                         'Piece Cache Percent': float(match.group(1))
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farmer', event)
 
             if 'Finished piece cache synchronization' in log['Event Data']:
                 event['Event Name'] = 'Finished Piece Cache Syncronization'
                 event['Event Type'] = 'Farmer'
                 event['Event Data'] = {
-                    'Status': 'Finished Piece Cache Syncronization',
+                    'Farmer Status': 'Piece Cache Syncronized',
                     'Piece Cache Percent': 100.00
                 }
+                NexusAPI.upsert_entity(base_url, 'farmer', event)
                 
             if 'Plotting sector' in log['Event Data']:
                 event['Event Name'] = 'Plotting Sector'
@@ -288,9 +306,10 @@ class StreamMonitor:
                         'Plot Percentage': float(match.group(2)),
                         'Plot Current Sector': int(match.group(3)),
                         'Plot Type': 'Plot',
-                        'Status': 'Plotting Sector'
+                        'Farm Status': 'Plotting Sector'
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
+                    # INSERT PLOT
 
             if 'Successfully signed reward hash' in log['Event Data']:
                 event['Event Name'] = 'Signed Reward Hash'
@@ -300,16 +319,11 @@ class StreamMonitor:
                 event['Event Data'] = {
                     'Farm Index': match.group(1),
                     'Reward Hash': match.group(2),
-                    'Reward Type': 'Reward'
+                    'Reward Type': 'Reward',
+                    'Farm Status': 'Farming'
                 }
-                # logger.info(event)
-
-            if 'Received invalid piece from peer piece_index' in log['Event Data']:
-                event['Event Name'] = 'Invalid Piece from Peer'
-                event['Event Type'] = 'Farmer'
-                event['Event Data'] = {
-                    'Log': log['Event Data']
-                }
+                NexusAPI.upsert_entity(base_url, 'farm', event)
+                # INSERT REWARD
 
             if 'Initial plotting complete' in log['Event Data']:
                 event['Event Name'] = 'Initial Plotting Complete'
@@ -323,8 +337,10 @@ class StreamMonitor:
                         'Plot Percentage': 100,
                         'Plot Current Sector': None,
                         'Plot Type': 'Plot',
-                        'Status': 'Farming'
+                        'Farm Status': 'Farming'
                     }
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
+                    # INSERT PLOT
 
             if 'Replotting sector' in log['Event Data']:
                 event['Event Name'] = 'Replotting Sector'
@@ -337,9 +353,10 @@ class StreamMonitor:
                         'Plot Percentage': float(match.group(2)),
                         'Plot Current Sector': int(match.group(3)),
                         'Plot Type': 'Replot',
-                        'Status': 'Replotting Sector'
+                        'Farm Status': 'Replotting Sector'
                     }
-                    # logger.info(event)
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
+                    # INSERT PLOT
 
             if 'Replotting complete' in log['Event Data']:
                 event['Event Name'] = 'Replotting Complete'
@@ -353,8 +370,10 @@ class StreamMonitor:
                         'Plot Percentage': 100,
                         'Plot Current Sector': None,
                         'Plot Type': 'Replot',
-                        'Status': 'Farming'
+                        'Farm Status': 'Farming'
                     }
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
+                    # INSERT PLOT
 
             if 'Failed to send solution' in log['Event Data']:
                 event['Event Name'] = 'Failed to Send Solution'
@@ -367,18 +386,26 @@ class StreamMonitor:
                     event['Event Data'] = {
                         'Farm Index': int(match.group(1)),
                         'Reward Hash': None,
-                        'Reward Type': 'Failed'
+                        'Reward Type': 'Failed',
+                        'Farm Status': 'Farming'
                     }
+                    NexusAPI.upsert_entity(base_url, 'farm', event)
+                    # INSERT REWARD
                 
+            if not event['Event Name'] and log["Event Level"] != 'INFO': 
+                event['Event Name'] = log["Event Level"]
+                event['Event Type'] = 'Farmer'
+                event['Event Data'] = {
+                    'message': log['Event Data']
+                }
+                logger.info(event)
+
             if not event['Event Name']: return None
+
             else: return event
         
         except Exception as e:
             logger.error(f"Error in parse_event {log}:", exc_info=e)
-    
-    @staticmethod
-    def handle_event(event):
-        logger.info('Event Handled')
 
     @staticmethod
     def monitor_stream(container_data, docker_client, stop_event, nexus_url):
@@ -414,7 +441,7 @@ class StreamMonitor:
                             # logger.warn(f"Unable to parse log: {log}")
                             continue
 
-                        event = StreamMonitor.parse_event(parsed_log, container_data['Container Name'])
+                        event = StreamMonitor.parse_event(parsed_log, container_data['Container Name'], nexus_url)
                         if not event:
                             continue
 

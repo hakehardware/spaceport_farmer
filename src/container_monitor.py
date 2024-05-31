@@ -67,5 +67,5 @@ class ContainerMonitor:
             'Event Data': container
         }
 
-        # NexusAPI.update_container(nexus_url, event)
+        NexusAPI.upsert_entity(nexus_url, 'container', event)
         NexusAPI.create_event(nexus_url, event)
